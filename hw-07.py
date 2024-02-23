@@ -210,18 +210,6 @@ def birthdays(book):
 def main():
     book = AddressBook()
     print("Welcome to the assistant bot!")
-    An = Record("Anne")
-    An.add_phone("3333344444")
-    An.add_phone("3333311111")
-    # An.add_birthday("28.02.1980")
-    book.add_record(An)
-    An = Record("Neek")
-    An.add_phone("1111122222")
-    An.add_phone("3333333333")
-    book.add_record(An)
-    An = Record("Abbe")
-    An.add_phone("9999900000")
-    book.add_record(An)
 
     while True:
         user_input = input("Enter a command: ")
