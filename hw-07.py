@@ -5,12 +5,8 @@ import re
 
 
 
-class ValuePhoneError(Exception):
+class ValueFieldError(Exception):
     pass
-    # def __init__(self, message="incorrect phone number"):
-    #     self.message = message
-    #     super().__init__(self.message)
-
 
 class Field:
     def __init__(self, value):
@@ -25,7 +21,7 @@ class Name(Field):
 class Phone(Field):
     def __init__(self, value):
         if not re.search("\d{10}", value) or len(value) > 10:
-            raise ValuePhoneError("incorrect phone number")
+            raise ValueFieldError("Please enter a 10-digit number.")
         super().__init__(value)
     
     def __eq__(self, other):
@@ -43,13 +39,14 @@ class Phone(Field):
         if not isinstance(other, Phone):
             return NotImplemented
         
+
 class Birthday(Field):
     def __init__(self, value):
         try:
             datetime_object = (datetime.strptime(value, "%d.%m.%Y")).date()
             super().__init__(datetime_object)
         except ValueError:
-            ValueError("Invalid date format. Use DD.MM.YYYY")
+            raise ValueFieldError("Invalid date format. Use DD.MM.YYYY")
 
 
 class Record:
@@ -71,8 +68,8 @@ class Record:
         for phone in self.phones:
             if phone == old_number:
                 self.phones[self.phones.index(phone)] = Phone(new_number)
-            else:
-                raise KeyError
+                return()
+        raise KeyError
 
     def find_phone(self, desired_phone: str):
         for phone in self.phones:
@@ -106,8 +103,9 @@ class AddressBook(UserDict):
         today = datetime.today().date()
         coming_birthdays = []
         for user in self.data:
+            if not (self.data.get(user)).birthday:
+                continue
             user_birthday = ((self.data.get(user)).birthday.value)
-
 
             #змінює рік народження на сьогоднішній
             birthday_this_year = datetime(today.year, user_birthday.month, user_birthday.day).date()
@@ -125,16 +123,16 @@ class AddressBook(UserDict):
                     greetings_day = birthday_this_year + timedelta(days=days_before_monday)
                 else:
                     greetings_day = birthday_this_year
-                coming_birthdays.append({"name":user.value, "birthday greetings": greetings_day.strftime("%Y.%m.%d")})
+                coming_birthdays.append({"name":user.value, "birthday greetings": greetings_day.strftime("%d.%m.%Y")})
         return(coming_birthdays)
 
 def input_error(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ValuePhoneError:
-            return "Please enter a 10-digit number."
-        except ValueError as e:
+        except ValueFieldError as e:
+            return e
+        except ValueError:
             return "Give me name and phone please."
         except KeyError:
             return "information does not exist."
@@ -153,17 +151,20 @@ def parse_input(user_input):
 @input_error
 def add_contact(args, book):
     name, phone = args
-    contact = Record(name)
-    contact.add_phone(phone)
-    book.add_record(contact)
+    if book.find(name):
+        contact =  book.find(name)
+        contact.add_phone(phone)
+    else:
+        contact = Record(name)
+        contact.add_phone(phone)
+        book.add_record(contact)
     return "Contact added."
 
 @input_error
 def change_contact(args, book):
-    try:
-        name, old_phone, new_phone = args
-    except ValueError:
-        return "Give me name, old phone and new phone please."
+    if len(args) != 3:
+        return("Give me name, old phone and new phone please.")
+    name, old_phone, new_phone = args
     contact = book.find(name)
     contact.edit_phone(old_phone, new_phone)
     return "Contact updated."
@@ -184,6 +185,8 @@ def show_phone(args, book):
 
 @input_error
 def add_birthday(args, book):
+    if len(args) != 2:
+        return("Give me name and date please.")
     name, date = args
     contact = book.find(name)
     contact.add_birthday(date)
@@ -192,17 +195,32 @@ def add_birthday(args, book):
 
 @input_error
 def show_birthday(args, book):
-    pass
+    name = args[0]
+    contact = book.find(name)
+    if not contact.birthday:
+        return("Birthday date not added.")
+    date = contact.birthday.value
+    return(date.strftime("%d.%m.%Y"))
+
 
 @input_error
-def birthdays(args, book):
-    pass
+def birthdays(book):
+   return(book.get_upcoming_birthdays())
 
 def main():
     book = AddressBook()
     print("Welcome to the assistant bot!")
     An = Record("Anne")
     An.add_phone("3333344444")
+    An.add_phone("3333311111")
+    # An.add_birthday("28.02.1980")
+    book.add_record(An)
+    An = Record("Neek")
+    An.add_phone("1111122222")
+    An.add_phone("3333333333")
+    book.add_record(An)
+    An = Record("Abbe")
+    An.add_phone("9999900000")
     book.add_record(An)
 
     while True:
@@ -235,34 +253,20 @@ def main():
             print(add_birthday(args, book))
 
         elif command == "show-birthday":
-            pass
+            print(show_birthday(args, book))
 
         elif command == "birthdays":
-            pass
+            this_week = birthdays(book)
+            if this_week:
+                print("Birthdays this week.")
+                for this_week in birthdays(book):
+                    print(this_week)
+            else:
+                print("There are no birthdays this week.")
 
         else:
             print("Invalid command.")
 
-
-    # # Створення запису для John
-    # john_record = Record("John")
-    # john_record.add_phone("1234567890")
-    # john_record.add_phone("5555555555")
-    # john_record.add_birthday("22.02.2024")
-
-    # # Додавання запису John до адресної книги
-    # book.add_record(john_record)
-
-    # # Створення та додавання нового запису для Jane
-    # jane_record = Record("Jane")
-    # jane_record.add_phone("9876543210")
-    # jane_record.add_birthday("25.02.2024")
-    # book.add_record(jane_record)
-
-    # # Виведення всіх записів у книзі
-    for name, record in book.data.items():
-        print(record)
-    # print(book.get_upcoming_birthdays())
 
 
 
